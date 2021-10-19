@@ -1,6 +1,6 @@
 import six
 import datetime
-from utils import get_columns
+from flask_servant.utils import get_columns
 
 # RESTX-FIELDS-CONVERSION
 RESTX_FIELDS_MAPPER = {
@@ -103,7 +103,11 @@ def apply_fields(parser, model_or_schema=None, exclude=[]):
 
     example_fields = ','.join(list(map(lambda f: f.get('name'), qs[:3]))) if qs else 'fieldA,fieldB'
 
-    qs.extend(QUERY_HELPERS)
+    for args in QUERY_HELPERS:
+        qs.append(dict(
+            name=args.get('name'),
+            **args.get('kwargs', {})
+        ))
 
     for arg in qs:
         arg.update(_defaults)
