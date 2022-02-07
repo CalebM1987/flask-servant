@@ -36,6 +36,13 @@ QUERY_HELPERS = [
             "type": int,
             "help": "Maximum number of results"
         }
+    },
+    {
+        "name": "$wildcards",
+        "kwargs": {
+            "type": str,
+            "help": "comma separated list of fields to use wild card query for (like)"
+        }
     }
 ]
 

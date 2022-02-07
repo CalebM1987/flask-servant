@@ -65,8 +65,8 @@ def create_schema(table, meta=Meta, session=None):
             required=not col.nullable,
         )
 
-        if col.nullable:
-            opts['missing'] = col.default
+        if col.nullable and col.default:
+            opts['missing'] = col.default.arg
 
         attrs[col.name] = maType(**opts)
     
@@ -80,4 +80,10 @@ def create_schema(table, meta=Meta, session=None):
 
     return type(f'{table.__name__}Schema', (Schema,), attrs)
 
-    
+
+class FindResponseBase(Schema):
+    total = fields.Integer(help='the total number of results')
+    count = fields.Integer(help='number of records in current page if paginated, otherwise total number or results')
+    paginated = fields.Boolean(help='set to true if the results are paginated')
+    page = fields.Integer(help='page number if if paginated', default=None)
+    totalPages = fields.Integer(help='total number of pages if results are paginated')

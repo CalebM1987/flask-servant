@@ -1,4 +1,9 @@
 import re
+import sqlalchemy
+
+def get_primary_key(table):
+    return sqlalchemy.inspection.inspect(table).primary_key[0]
+    
 
 def get_columns(table):
     """gets the raw column objects
