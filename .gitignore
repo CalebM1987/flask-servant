@@ -1,5 +1,7 @@
 static/
-testing/
+# testing/
+breweries.db
+breweries.sqlite
 testing_apifairy/
 
 # Byte-compiled / optimized / DLL files
