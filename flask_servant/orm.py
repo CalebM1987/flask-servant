@@ -2,9 +2,11 @@ from typing import TypeVar
 from flask_servant.declarative import db
 from marshmallow import Schema
 from flask_servant.utils import get_columns
-from sqlalchemy.orm import joinedload
+from flask_servant.pagination import Paginator, PAGINATION_CACHE
+from sqlalchemy.orm import joinedload, Query
 from munch import munchify
 import sqlalchemy
+from typing import Any
 
 Column = sqlalchemy.sql.schema.Column
 InstrumentedAttribute = sqlalchemy.orm.attributes.InstrumentedAttribute
@@ -19,7 +21,7 @@ def get_editable_fields(table):
     return [column.name for column in get_columns(table) if not column.primary_key and not column.foreign_keys]
 
 
-def filter_schema_fields(obj, schema, fields=None, **kwargs):
+def filter_schema_fields(obj: Any, schema: Schema, fields=None, **kwargs):
     """runs a schema through a fields filter
     Args:
         obj: the object to serialize
@@ -34,7 +36,7 @@ def filter_schema_fields(obj, schema, fields=None, **kwargs):
     return schema.dump(obj)
 
 
-def apply_fields_filter(table, q, fields=[], maSchema=None, **kwargs):
+def apply_fields_filter(table: Any, q: Query, fields=[], maSchema=None, **kwargs):
     """applies a field filter to an existing query object
     Args:
         table (sqlalchemy.ext.declarative.api.DeclarativeMeta): a sqlalchemy declarative table
@@ -113,7 +115,7 @@ def create_or_merge_schema(schema, **kwargs):
     return schema(**kwargs)
 
 
-def query_table(table, session=None, _wildcards=[], _limit: int=None, **kwargs):
+def query_table(table, session=None, _wildcards=[], **kwargs):
     session = session or db.session
 
     conditions = []
@@ -139,8 +141,18 @@ def query_table(table, session=None, _wildcards=[], _limit: int=None, **kwargs):
 
     print('table has query: ', hasattr(table.__table__, 'query'))
     if hasattr(table, 'query'):
-        res = table.query.filter(*conditions)
+        res: Query = table.query.filter(*conditions)
     else:
-        res = session.query(table).filter(*conditions)
+        res: Query = session.query(table).filter(*conditions)
+
+    return res
+    # if _limit:
+    #     paginator = Paginator(res, _limit)
+    #     PAGINATION_CACHE[paginator.id]
+    #     res = res.limit(_limit)
+    #     if _offset:
+    #         res = res.offset(_offset)
+    #     return res
+    # else:
+    #     return res.all()
     
-    return res.all()

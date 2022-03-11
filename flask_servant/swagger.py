@@ -38,6 +38,27 @@ QUERY_HELPERS = [
         }
     },
     {
+        "name": "$offset",
+        "kwargs": {
+            "type": int,
+            "help": "offset results for pagination"
+        }
+    },
+    {
+        "name": "$page",
+        "kwargs": {
+            "type": int,
+            "help": "the desired page within a paginated query"
+        }
+    },
+    {
+        "name": "$session_uid",
+        "kwargs": {
+            "type": str,
+            "help": "cached pagination result id, use cached paginated query result (default expiration of 30 minutes)"
+        }
+    },
+    {
         "name": "$wildcards",
         "kwargs": {
             "type": str,

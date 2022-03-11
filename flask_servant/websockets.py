@@ -15,7 +15,7 @@ class SocketIORegistry(object):
     @classmethod
     def register(cls, app: Flask):
         cls._app = app
-        cls._socketio = SocketIO(app)
+        cls._socketio = SocketIO(app, cors_allowed_origins="*")
         cls._has_sockets = True
         return cls._app
 

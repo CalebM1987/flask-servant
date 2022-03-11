@@ -1,7 +1,9 @@
+import stat
 from flask.json import jsonify
 from flask_restx import Resource, Namespace
 from flask_accepts import accepts, responds
-from flask_servant.utils import get_route_name
+from flask_servant.pagination import PAGINATION_CACHE, Paginator
+from flask_servant.utils import get_route_name, get_typed_query_param
 from flask_servant.swagger import apply_fields
 from flask_servant.orm import query_table
 from flask_servant.schema import create_schema, FindResponseBase
@@ -10,11 +12,11 @@ from flask import request, jsonify
 from typing import List
 from flask_servant.websockets import get_socket
 
+SESSION_COOKIE = 'X-FLASK-SERVANT-QUERY-SESSION'
 
 def create_crud_operations(table, ns: Namespace, exclude: List[str]=[], schema=None, session=None):
     if not schema:
         schema = create_schema(table, session=session)
-    print('schema: ', schema)
 
     FindResponse = type(
         f'{table.__tablename__}FindResponse',
@@ -36,36 +38,99 @@ def create_crud_operations(table, ns: Namespace, exclude: List[str]=[], schema=N
         @ns.expect(parser, api=ns)
         @responds(schema=FindResponse, api=ns)
         def get(self):
-            args = request.args
-            results = schema(many=True).dump(query_table(table, session=session, **args))
+            query_kwargs, special_kwargs = {}, {}
+            for k,v in request.args.items():
+                if k.startswith('$'):
+                    special_kwargs[k] = v
+                else:
+                    query_kwargs[k] = v
+            
+            # first check for cached query
+            paginator, query = None, None
+            cached_query_cookie_name = f'{SESSION_COOKIE}__{get_route_name(table)}'
+            session_cookie = request.cookies.get(cached_query_cookie_name)
+            page = get_typed_query_param(special_kwargs, '$page', int)
+            session_uid = special_kwargs.get('$session_uid') or session_cookie
+            if session_uid and page:
+                # pull from paginated results cache
+                print('session cookie: ', session_uid, session_cookie)
+                paginator = PAGINATION_CACHE.get(session_uid)
+                print('pulled cached pagination result?', paginator)
+                if paginator:
+                    query = paginator.query
+
+            if not query:
+                # no cached query, fetch new query
+                print('found no cached queries, forming new one')
+                query = query_table(table, session=session, **query_kwargs)
+
+            schemaKwargs = { 'many': True }
+            fields = get_typed_query_param(special_kwargs, '$fields', list)
+            offset = get_typed_query_param(special_kwargs, '$offset', int)
+            limit = get_typed_query_param(special_kwargs, '$limit', int)
+            
+            if fields:
+                schemaKwargs['only'] = fields
+
+            results = []
+            
+            if page or limit:
+                if not paginator:
+                    paginator = Paginator(query, int(limit or offset or '50'))
+                    PAGINATION_CACHE.add(paginator)
+
+                # return paginated results with user defined page or default to 1
+                results = paginator.getPage(page or 1)
+
+            elif offset:
+                results = query.offset(int(offset))
+            else:
+                results = query.all()
+
+            serialized_results = schema(**schemaKwargs).dump(results)
             socket = get_socket()
-            print('socket yo??', socket)
+
             if socket:
-                socket.emit('find', results)
-                print('emitted')
-            return jsonify(
+                socket.emit(f'{get_route_name(table)}/find', {"results": serialized_results, 'params': request.args.to_dict() })
+            result_count = len(serialized_results)
+
+            # return find response
+            response = jsonify(
                 dict(
-                    results=results,
-                    total=len(results),
-                    count=len(results),
-                    page=None,
-                    paginated=False,
-                    totalPages=None
+                    count=result_count,
+                    paginated=paginator is not None,
+                    results=serialized_results,
+                    total=paginator.total if paginator else result_count,
+                    page=paginator.currentPage if paginator else None,
+                    totalPages=paginator.pages if paginator else None,
+                    session_uid=paginator.id if paginator else None
                 )
             )
 
+            if paginator and paginator.id != session_cookie:
+                print('setting new session cookie: ', paginator.id)
+                response.set_cookie(
+                    cached_query_cookie_name, 
+                    paginator.id, 
+                    expires=paginator.expires
+                )
+
+            return response
+
 
         @accepts(schema=schema, api=ns)
+        @responds(schema=schema, status_code=201, api=ns)
         def post(self):
             payload = request.json
             record = schema().load(payload)
-            print('record is: ', record)
             session.add(record)
             session.commit()
             socket = get_socket()
+            entity = schema().dump(record)
             if socket:
-                socket.emit(f'{get_route_name(table)}/create', schema().dump(record))
-            return jsonify({ 'status': 'success' })
+                socket.emit(f'{get_route_name(table)}/create', entity)
+            return record
+            # return jsonify({ 'status': 'success', 'entity': entity })
 
     class NestedHandler(Resource):
         
@@ -83,19 +148,35 @@ def create_crud_operations(table, ns: Namespace, exclude: List[str]=[], schema=N
             session.commit()
             return obj
 
+        @accepts(schema=schema, api=ns)
         @responds(schema=schema, api=ns)
         def put(self, id):
-            return self._updater(id)
+            obj = self._updater(id)
+            entity = schema().dump(obj)
+            socket = get_socket()
+            if socket:
+                socket.emit(f'{get_route_name(table)}/put', entity)
+            return entity
 
+        @accepts(schema=schema, api=ns)
         @responds(schema=schema, api=ns)
         def patch(self, id):
-            return self._updater(id)
+            obj = self._updater(id)
+            entity = schema().dump(obj)
+            socket = get_socket()
+            if socket:
+                socket.emit(f'{get_route_name(table)}/patch', entity)
+            return entity
 
         @responds(schema=schema, api=ns)
         def delete(self, id):
             obj = session.query(table).get(id)
             obj.delete() if hasattr(obj, 'delete') else session.delete(obj)
             session.commit()
+            entity = schema().dump(obj)
+            socket = get_socket()
+            if socket:
+                socket.emit(f'{get_route_name(table)}/delete', entity)
             return obj
 
     
