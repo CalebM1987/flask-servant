@@ -52,6 +52,13 @@ QUERY_HELPERS = [
         }
     },
     {
+        "name": "$orderBy",
+        "kwargs": {
+            "type": str,
+            "help": "a field to specify order by"
+        }
+    },
+    {
         "name": "$session_uid",
         "kwargs": {
             "type": str,

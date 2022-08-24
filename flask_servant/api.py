@@ -39,11 +39,15 @@ def create_crud_operations(table, ns: Namespace, exclude: List[str]=[], schema=N
         @responds(schema=FindResponse, api=ns)
         def get(self):
             query_kwargs, special_kwargs = {}, {}
+            replacer = {
+                '$wildcards': '_wildcards',
+                '$orderBy': '_orderBy'
+            }
             for k,v in request.args.items():
-                if k.startswith('$'):
+                if k.startswith('$') and k not in ['$wildcards', '$orderBy']:
                     special_kwargs[k] = v
                 else:
-                    query_kwargs[k] = v
+                    query_kwargs[replacer.get(k, k)] = v
             
             # first check for cached query
             paginator, query = None, None
@@ -68,7 +72,8 @@ def create_crud_operations(table, ns: Namespace, exclude: List[str]=[], schema=N
             fields = get_typed_query_param(special_kwargs, '$fields', list)
             offset = get_typed_query_param(special_kwargs, '$offset', int)
             limit = get_typed_query_param(special_kwargs, '$limit', int)
-            
+            orderBy = get_typed_query_param(special_kwargs, '$orderBy')
+
             if fields:
                 schemaKwargs['only'] = fields
 
@@ -171,6 +176,8 @@ def create_crud_operations(table, ns: Namespace, exclude: List[str]=[], schema=N
         @responds(schema=schema, api=ns)
         def delete(self, id):
             obj = session.query(table).get(id)
+            if obj is None:
+                return jsonify({'error': { 'message':  f'no resource from {get_route_name(table)} found matching id: {id}'}})
             obj.delete() if hasattr(obj, 'delete') else session.delete(obj)
             session.commit()
             entity = schema().dump(obj)

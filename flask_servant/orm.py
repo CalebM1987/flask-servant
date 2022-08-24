@@ -115,7 +115,7 @@ def create_or_merge_schema(schema, **kwargs):
     return schema(**kwargs)
 
 
-def query_table(table, session=None, _wildcards=[], **kwargs):
+def query_table(table, session=None, _wildcards=[], _orderBy: str=None, **kwargs):
     session = session or db.session
 
     conditions = []
@@ -145,14 +145,20 @@ def query_table(table, session=None, _wildcards=[], **kwargs):
     else:
         res: Query = session.query(table).filter(*conditions)
 
+    # check for order by
+    if _orderBy:
+        orderByField, asc_dsc = None, None
+        if '.$' in _orderBy:
+            orderByField, asc_dsc = _orderBy.split('.$')[:2]
+        else:
+            orderByField = _orderBy
+        
+        if orderByField and hasattr(table, orderByField):
+            
+            if asc_dsc == 'desc':
+                res = res.order_by(sqlalchemy.desc(getattr(table, orderByField)))
+            else:
+                res = res.order_by(orderByField)
+
     return res
-    # if _limit:
-    #     paginator = Paginator(res, _limit)
-    #     PAGINATION_CACHE[paginator.id]
-    #     res = res.limit(_limit)
-    #     if _offset:
-    #         res = res.offset(_offset)
-    #     return res
-    # else:
-    #     return res.all()
     
