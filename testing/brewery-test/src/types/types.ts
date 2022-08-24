@@ -37,4 +37,6 @@ export interface IBreweryProperties {
   creator?: number;
 }
 
+export type BreweryFeature = Feature<Point, IBreweryProperties>;
+
 export type BreweryFeatureCollection = FeatureCollection<Point, IBreweryProperties>;

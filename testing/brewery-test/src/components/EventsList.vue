@@ -24,14 +24,17 @@ export default defineComponent({
             console.log(eventName, payload)
             const event = handleSocket(socket, eventName, payload)
             events.value.unshift(event)
-            setTimeout(()=> events.value.pop(), 120000)
+            setTimeout(()=> events.value.pop(), 60000)
           })
         }
       }
     })
 
     return {
-      events
+      events,
+      removeItem(index: number){
+        events.value.splice(index, 1)
+      }
     }
   }
 })
@@ -46,6 +49,7 @@ export default defineComponent({
         v-for="(event,i) in events" 
         :event="event" 
         :key="i"
+        @remove-event="removeItem(i)"
       ></socket-event>
     </ul>
   </div>

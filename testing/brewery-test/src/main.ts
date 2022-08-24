@@ -7,7 +7,11 @@ import "@esri/calcite-components/dist/components/calcite-button";
 import "@esri/calcite-components/dist/components/calcite-icon";
 import "@esri/calcite-components/dist/components/calcite-loader";
 import '@esri/calcite-components/dist/calcite/calcite.css';
-
+import ToastService from 'primevue/toastservice';
+console.log('TOAST SERVICE: ', ToastService)
+import 'primevue/resources/themes/saga-blue/theme.css'       //theme
+import 'primevue/resources/primevue.min.css'                 //core css
+import 'primeicons/primeicons.css'
 
 setAssetPath(location.href);
 
@@ -17,6 +21,7 @@ setAssetPath(location.href);
 createApp(App)
     .use(VueMapboxTs)
     .use(PrimeVue)
+    .use(ToastService)
     .mount('#app')
 
 

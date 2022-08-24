@@ -28,26 +28,19 @@ export default defineComponent({
 
   mounted(){
     const calciteSwitch = this.$refs.switch as Switch //Components.CalciteSwitch //
-    calciteSwitch.el.addEventListener('calciteSwitchChange', (evt: any)=> {
-      this.onChange((evt.target as Switch).checked)
-    })
+    if (calciteSwitch){
+      calciteSwitch.el.addEventListener('calciteSwitchChange', (evt: any)=> {
+        this.onChange((evt.target as Switch).checked)
+      })
+    }
   }
 })
 </script>
 
 <template>
-  <div class="container-fluid">
+  <div class="container">
     <div class="row">
-      <div class="col-lg-6 col-md-12">
-        <calcite-switch :checked="showLoader" 
-          @calciteSwitchChange="onChange" 
-          label="show loader" ref="switch"
-        />
-        <p>loader: {{ showLoader }}</p>
-        <events-list />
-        <!-- <calcite-loader active="true" v-if="showLoader" /> -->
-      </div>
-      <div class="col-lg-6 col-md-12">
+      <div class="col col-lg-8 cold-md-12">
         <Suspense>
           <template #default>
           
@@ -61,6 +54,17 @@ export default defineComponent({
 
         </Suspense>
       </div>
+
+      <div class="col-lg-4 col-md-12">
+        <!-- <calcite-switch :checked="showLoader" 
+          @calciteSwitchChange="onChange" 
+          label="show loader" ref="switch"
+        />
+        <p>loader: {{ showLoader }}</p> -->
+        <events-list />
+        
+      </div>
+      
 
     </div>
   </div>

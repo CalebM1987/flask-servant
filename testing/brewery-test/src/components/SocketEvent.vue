@@ -1,9 +1,13 @@
 <script lang="ts">
 import { defineComponent, PropType, getCurrentInstance } from "vue";
 import { ISocketEvent } from '../types/types';
+import Button from 'primevue/button'
 
 export default defineComponent({
   name: 'socket-event',
+  components: {
+    Button
+  },
   props: {
     event: {
       type: Object as PropType<ISocketEvent>,
@@ -24,7 +28,7 @@ export default defineComponent({
   <li :class="`list-group-item event-info my-1 ${event.theme ? 'list-group-item-' + event.theme: ''}`">
     <div class="d-flex justify-content-between">
       <h5 class="card-title">{{event.type }}: {{event.name}}</h5>
-      <span></span>
+      <span><Button icon="pi pi-times" class="p-button-rounded p-button-danger p-button-text" @click="$emit('remove-event', event)"/></span>
     </div>
     <p class="text-secondary text-sm">{{ event.time }}</p>
     <button class="btn btn-primary" type="button" data-toggle="collapse" :data-target="`#event-payload-${uid}`" aria-expanded="false" aria-controls="collapseExample">
